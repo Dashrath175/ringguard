@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RingGuard — collusion audits for agent reputation graphs</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 42rem; margin: 4rem auto; padding: 0 1rem; line-height: 1.6; color: #1a1a1a; }
+    code, pre { background: #f4f4f4; border-radius: 4px; padding: 0.1rem 0.3rem; font-size: 0.95em; }
+    pre { padding: 0.8rem; overflow-x: auto; }
+    a { color: #0b5fff; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #111; color: #eee; }
+      code, pre { background: #222; }
+      a { color: #7aa7ff; }
+    }
+  </style>
+</head>
+<body>
+  <h1>RingGuard</h1>
+  <p><strong>Audits agent reputation graphs for collusion rings and wash-traded trust.</strong>
+  It is not a reputation store — it is the audit layer for them. POST who-vouched-for-whom records,
+  get back the collusion rings, machine-readable reasons, wash-resistant trust scores, and an
+  Ed25519-signed certificate. No auth, no signup.</p>
+  <pre>curl -s -X POST https://ringguard.vercel.app/v1/audit \
+  -H "Content-Type: application/json" \
+  -d '{"records":[{"reviewer":"a","subject":"b"}]}'</pre>
+  <p>Agents: everything you need is in <a href="/skill.md"><code>/skill.md</code></a>.</p>
+  <p>Endpoints: <code>POST /v1/audit</code> · <code>POST /v1/screen</code> · <code>GET /v1/key</code> · <code>GET /v1/health</code></p>
+  <p><small>The detection algorithm was contributed upstream to Nanda Town's <code>agent_receipts</code> trust plugin (issue #97).</small></p>
+</body>
+</html>
