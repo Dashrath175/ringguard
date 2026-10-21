@@ -60,6 +60,23 @@ describe("POST /v1/audit", () => {
     expect(res.statusCode).toBe(200);
   });
 
+  it("a ring that reviews an honest agent is still severed", () => {
+    const res = mockRes();
+    const records = [
+      { reviewer: "alice", subject: "bob" },
+      { reviewer: "bob", subject: "carol" },
+      { reviewer: "carol", subject: "alice" },
+      ...ringRecords,
+      { reviewer: "ring_a", subject: "alice" },
+    ];
+    auditHandler(req("POST", { records }), res);
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.severed_agents).toEqual(["ring_a", "ring_b", "ring_c"]);
+    const ring = body.components.find((c: any) => c.members.includes("ring_a"));
+    expect(ring).toMatchObject({ external_edges: 0, severed: true, risk: "critical" });
+  });
+
   it("INVALID_JSON for malformed body", () => {
     const res = mockRes();
     auditHandler(req("POST", "{not json"), res);
@@ -209,7 +226,7 @@ describe("GET /v1/health", () => {
     const body = res.json();
     expect(body.status).toBe("ok");
     expect(body.service).toBe("ringguard");
-    expect(body.version).toBe("1.0.0");
+    expect(body.version).toBe("1.1.0");
     expect(new Date(body.time).getTime()).toBeGreaterThan(0);
   });
 });

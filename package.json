@@ -1,6 +1,6 @@
 {
   "name": "ringguard",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Audits AI-agent reputation graphs for collusion rings and wash-traded trust. Not a reputation store; the audit layer for them.",
   "scripts": {

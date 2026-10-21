@@ -9,7 +9,7 @@ export interface ComponentAnalysis {
   members: string[];
   size: number;
   internalDensity: number;
-  /** Directed edges (either direction) linking this component to any clean (non-shaped) component. */
+  /** Incoming vouches this component receives from members of clean (non-shaped) components. */
   externalEdges: number;
   shaped: boolean;
   exonerated: boolean;
@@ -30,9 +30,10 @@ export function collusionShaped(size: number, density: number): boolean {
  * Full structural analysis, size-blind:
  *  1. SCC decomposition (deterministic ordering).
  *  2. Shape test per component.
- *  3. Exoneration: a shaped component with ≥1 edge (either direction) to a
- *     clean component is flagged (warning) but not severed. Shaped neighbors
- *     never exonerate each other.
+ *  3. Exoneration: a shaped component that receives ≥1 vouch from a clean
+ *     component is flagged (warning) but not severed. Its own outgoing vouches
+ *     never count, so a ring cannot exonerate itself by reviewing honest
+ *     agents. Shaped neighbors never exonerate each other.
  *  4. Severed = shaped ∧ not exonerated — for every component including the
  *     largest (the size-blind guarantee).
  */
@@ -46,15 +47,16 @@ export function analyzeGraph(graph: Graph): ComponentAnalysis[] {
   const densities = components.map((m) => internalDensity(graph, m));
   const shaped = components.map((m, i) => collusionShaped(m.length, densities[i]));
 
-  // Count, per component, the directed cross-edges that touch a clean component.
+  // Count, per component, the incoming vouches from clean components. Only a
+  // vouch an outsider gives corroborates; a vouch the component gives is its
+  // own claim and costs a ring nothing to issue.
   const cleanEdgeCount = components.map(() => 0);
   for (const [from, targets] of graph.adj) {
     const cFrom = componentOf.get(from)!;
+    if (shaped[cFrom]) continue;
     for (const to of targets.keys()) {
       const cTo = componentOf.get(to)!;
-      if (cFrom === cTo) continue;
-      if (!shaped[cTo]) cleanEdgeCount[cFrom]++;
-      if (!shaped[cFrom]) cleanEdgeCount[cTo]++;
+      if (cFrom !== cTo) cleanEdgeCount[cTo]++;
     }
   }
 

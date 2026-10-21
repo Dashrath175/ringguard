@@ -23,7 +23,7 @@ No authentication anywhere. CORS `*`. Every error is `{"error":{"code","message"
 1. Build a weighted directed vouch graph (duplicates aggregate into edge weight; self-reviews rejected).
 2. Decompose into strongly-connected components (iterative Tarjan — no recursion).
 3. A component is **collusion-shaped** iff size ≥ 3 with internal density ≥ 0.8, or it is a mutual-only pair.
-4. A shaped component is **exonerated** iff any *clean* (non-shaped) component has an edge to/with it. Shaped neighbors never exonerate each other.
+4. A shaped component is **exonerated** iff it receives at least one vouch from a *clean* (non-shaped) component. Its own outgoing vouches never count, so a ring cannot exonerate itself by reviewing honest agents. Shaped neighbors never exonerate each other.
 5. **Severed = shaped ∧ not exonerated — for every component including the largest** (the size-blind guarantee).
 6. Effective trust per agent: `1 − e^(−raw/10)` over incoming vouch weight from non-severed reviewers, as fixed 4-decimal strings. Severed agents score `0.0000`.
 7. The certificate (`audit_id`, `severed_agents`, `guarantee`, `issued_at`) is signed with Ed25519 over canonical JSON (sorted keys, compact).
