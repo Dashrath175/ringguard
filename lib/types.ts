@@ -1,5 +1,5 @@
 export const SERVICE_NAME = "ringguard";
-export const VERSION = "1.0.0";
+export const VERSION = "1.1.0";
 
 /** A single review/vouch record — the one and only input shape. */
 export interface ReviewRecord {

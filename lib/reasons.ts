@@ -1,8 +1,9 @@
 import type { ComponentAnalysis } from "./severance";
 
 export const CAVEATS = [
-  "An isolated dense clique with zero external vouches is indistinguishable from a wash ring by structure; RingGuard severs it fail-safe rather than guessing by size.",
-  "risk 'warning' means collusion-shaped but externally corroborated: reported for review, never severed.",
+  "A dense clique that no clean outsider vouches for is indistinguishable from a wash ring by structure; RingGuard severs it fail-safe rather than guessing by size.",
+  "risk 'warning' means collusion-shaped but vouched for by at least one clean outsider: reported for review, never severed. A component's own outgoing vouches never count as corroboration.",
+  "Structure cannot tell a fabricated outsider from a real one: a fresh identity that vouches for a ring downgrades it to 'warning'. Where identities are cheap, check who the corroborating vouchers are.",
 ];
 
 export function formatDensity(density: number): string {
@@ -27,9 +28,9 @@ export function componentReason(a: ComponentAnalysis): string {
       ? "2-member component: mutual-only vouch pair"
       : `${a.size}-member component: internal density ${density} ≥ 0.80, size ≥ 3`;
   if (a.severed) {
-    return `${base}, external corroborating edges: 0 → collusion-shaped and isolated → severed.`;
+    return `${base}, incoming vouches from clean outsiders: 0 → collusion-shaped and uncorroborated → severed.`;
   }
-  return `${base}, external corroborating edges: ${a.externalEdges} → collusion-shaped but externally corroborated → flagged, not severed.`;
+  return `${base}, incoming vouches from clean outsiders: ${a.externalEdges} → collusion-shaped but externally corroborated → flagged, not severed.`;
 }
 
 /** One self-narrating sentence naming the counts. */

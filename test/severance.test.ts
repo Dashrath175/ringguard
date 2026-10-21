@@ -94,6 +94,49 @@ describe("Phase 1 severance fixtures", () => {
   });
 });
 
+describe("corroboration counts incoming vouches only", () => {
+  it("a ring cannot exonerate itself by vouching for honest agents", () => {
+    const records = [
+      ...clique("ring", 3),
+      ...chain("h", 3),
+      { reviewer: "ring0", subject: "h0" },
+      { reviewer: "ring1", subject: "h1" },
+      { reviewer: "ring2", subject: "h2" },
+    ];
+    const analyses = analyzeGraph(buildGraph(records));
+    const ring = analyses.find((a) => a.members.includes("ring0"))!;
+    expect(ring.externalEdges).toBe(0);
+    expect(ring.exonerated).toBe(false);
+    expect(ring.risk).toBe("critical");
+    expect(severedOf(records)).toEqual(["ring0", "ring1", "ring2"]);
+  });
+
+  it("only the incoming side of a two-way bridge is counted", () => {
+    const records = [
+      ...clique("ring", 4),
+      ...chain("h", 3),
+      { reviewer: "h0", subject: "ring0" },
+      { reviewer: "ring1", subject: "h2" },
+    ];
+    const ring = analyzeGraph(buildGraph(records)).find((a) => a.members.includes("ring0"))!;
+    expect(ring.externalEdges).toBe(1);
+    expect(ring.risk).toBe("warning");
+  });
+
+  it("a self-vouching ring's review of an honest agent is voided from scores", () => {
+    const honest: ReviewRecord[] = [
+      { reviewer: "alice", subject: "bob" },
+      { reviewer: "bob", subject: "carol" },
+      { reviewer: "carol", subject: "alice" },
+    ];
+    const response = runAudit([...honest, ...clique("ring", 3), { reviewer: "ring0", subject: "alice" }]);
+    expect(response.severed_agents).toEqual(["ring0", "ring1", "ring2"]);
+    // alice keeps only carol's vouch (raw 1); ring0's vouch would make it raw 2 → 0.1813
+    expect(response.effective_scores["alice"]).toBe("0.0952");
+    expect(response.effective_scores["ring0"]).toBe("0.0000");
+  });
+});
+
 describe("graph mechanics", () => {
   it("SCCs are deterministic: sorted members, ordered by (−size, lexicographic)", () => {
     const records = [...clique("zz", 3), ...clique("aa", 3), { reviewer: "solo", subject: "aa0" }];
@@ -182,10 +225,18 @@ describe("scoring", () => {
 });
 
 describe("reasons and summaries", () => {
-  it("severed ring reason names density, size rule, and isolation", () => {
+  it("severed ring reason names density, size rule, and missing corroboration", () => {
     const analyses = analyzeGraph(buildGraph(clique("r", 4)));
     expect(componentReason(analyses[0])).toBe(
-      "4-member component: internal density 1.00 ≥ 0.80, size ≥ 3, external corroborating edges: 0 → collusion-shaped and isolated → severed.",
+      "4-member component: internal density 1.00 ≥ 0.80, size ≥ 3, incoming vouches from clean outsiders: 0 → collusion-shaped and uncorroborated → severed.",
+    );
+  });
+
+  it("warning reason counts the corroborating incoming vouches", () => {
+    const records = [...clique("r", 4), ...chain("h", 3), { reviewer: "h0", subject: "r0" }];
+    const ring = analyzeGraph(buildGraph(records)).find((a) => a.members.includes("r0"))!;
+    expect(componentReason(ring)).toBe(
+      "4-member component: internal density 1.00 ≥ 0.80, size ≥ 3, incoming vouches from clean outsiders: 1 → collusion-shaped but externally corroborated → flagged, not severed.",
     );
   });
 
@@ -220,6 +271,13 @@ describe("screen diffing", () => {
     expect(result.newly_exonerated).toEqual(["ring0", "ring1", "ring2"]);
     expect(result.newly_severed).toEqual([]);
     expect(result.verdict).toBe("safe");
+  });
+
+  it("a severed ring reviewing an honest agent does not exonerate itself", () => {
+    const existing = [...clique("ring", 3), ...chain("h", 3)];
+    const result = runScreen(existing, [{ reviewer: "ring0", subject: "h0" }]);
+    expect(result.newly_exonerated).toEqual([]);
+    expect(result.newly_severed).toEqual([]);
   });
 
   it("screening into an empty ledger works", () => {

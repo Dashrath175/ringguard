@@ -67,7 +67,7 @@ Response (exact output for this input; only `certificate.issued_at` and `signatu
       "collusion_shaped": true,
       "severed": true,
       "risk": "critical",
-      "reason": "3-member component: internal density 1.00 ≥ 0.80, size ≥ 3, external corroborating edges: 0 → collusion-shaped and isolated → severed."
+      "reason": "3-member component: internal density 1.00 ≥ 0.80, size ≥ 3, incoming vouches from clean outsiders: 0 → collusion-shaped and uncorroborated → severed."
     }
   ],
   "severed_agents": [
@@ -84,8 +84,9 @@ Response (exact output for this input; only `certificate.issued_at` and `signatu
     "ring_c": "0.0000"
   },
   "caveats": [
-    "An isolated dense clique with zero external vouches is indistinguishable from a wash ring by structure; RingGuard severs it fail-safe rather than guessing by size.",
-    "risk 'warning' means collusion-shaped but externally corroborated: reported for review, never severed."
+    "A dense clique that no clean outsider vouches for is indistinguishable from a wash ring by structure; RingGuard severs it fail-safe rather than guessing by size.",
+    "risk 'warning' means collusion-shaped but vouched for by at least one clean outsider: reported for review, never severed. A component's own outgoing vouches never count as corroboration.",
+    "Structure cannot tell a fabricated outsider from a real one: a fresh identity that vouches for a ring downgrades it to 'warning'. Where identities are cheap, check who the corroborating vouchers are."
   ],
   "certificate": {
     "audit_id": "965d60242c4f31fb",
@@ -173,7 +174,7 @@ Response:
 curl -s https://ringguard.vercel.app/v1/health
 ```
 
-Returns `{"status":"ok","service":"ringguard","version":"1.0.0","time":"<ISO-8601>"}`. Call it first if you want to confirm the service is up.
+Returns `{"status":"ok","service":"ringguard","version":"1.1.0","time":"<ISO-8601>"}`. Call it first if you want to confirm the service is up.
 
 ---
 
@@ -257,10 +258,11 @@ Every non-200 response is `{"error": {"code", "message", "hint"}}` — the `hint
 
 ## How to read the result
 
-- `severed: true` / `risk: "critical"` — the component is collusion-shaped (dense mutual vouching) with zero corroboration from any clean outsider. Treat its members as untrusted; their vouches are voided from all scores.
-- `risk: "warning"` — collusion-shaped but at least one clean outsider vouches for/with it, so it is flagged for review, never punished. This is the false-positive valve for dense honest teams.
+- `severed: true` / `risk: "critical"` — the component is collusion-shaped (dense mutual vouching) and no clean outsider vouches for it. Treat its members as untrusted; their vouches are voided from all scores.
+- `risk: "warning"` — collusion-shaped but at least one clean outsider vouches for it, so it is flagged for review, never punished. This is the false-positive valve for dense honest teams.
 - `risk: "none"` — no collusion shape.
-- `reason` — a per-component sentence citing the measured values (size, density, external edges) behind the verdict.
+- `external_edges` — the number of incoming vouches the component receives from clean outsiders. Only these corroborate: vouches the component itself gives out never count, so a ring cannot clear itself by reviewing honest agents.
+- `reason` — a per-component sentence citing the measured values (size, density, incoming vouches from clean outsiders) behind the verdict.
 - `effective_scores[agent]` — wash-resistant trust in [0,1): `1 − e^(−raw/10)` where `raw` sums incoming vouch weights from non-severed reviewers only. Severed agents score `"0.0000"`.
 - `summary` — one sentence you can log or show a human verbatim.
 
@@ -275,7 +277,8 @@ Identical input records always produce identical `audit_id`, `components`, `seve
 ## Caveats & guarantee
 
 - **Guarantee — `size_blind`:** severance never depends on a component being a minority of the graph. A collusion ring larger than the honest population is severed exactly like a small one; majority rings cannot vote themselves clean.
-- **Epistemic limit:** an isolated dense clique with zero external vouches is structurally indistinguishable from a wash ring. RingGuard severs it fail-safe rather than guessing by size; genuinely honest tight teams earn back trust the moment any clean outsider vouches for or with them (they then appear as `warning`, not severed).
+- **Epistemic limit:** a dense clique that no clean outsider vouches for is structurally indistinguishable from a wash ring. RingGuard severs it fail-safe rather than guessing by size; genuinely honest tight teams earn back trust the moment any clean outsider vouches for them (they then appear as `warning`, not severed). Reviews the team gives out do not count.
+- **Sybil limit:** RingGuard sees only the vouch graph, so it cannot tell a freshly created outsider from a real one. A ring that fabricates an outside identity to vouch for itself appears as `warning`, not severed. Where identities are cheap, inspect who vouches for each `warning` component before trusting it.
 
 ---
 
